@@ -3,10 +3,10 @@ import time
 import pyautogui as pag
 
 
-def get_panel_size(position="left_top"):
+def get_panel_size(desc=""):
     # TODO gaicheng anxia he taiqi huode liangge dian
 
-    print("三秒后,将鼠标移动到题目{}角".format("左上" if position == "left_top" else "右下"))
+    print("三秒后,将鼠标移动{}".format(desc))
     time.sleep(1)
     print("3...")
     time.sleep(1)
@@ -18,6 +18,12 @@ def get_panel_size(position="left_top"):
     print("已获取到坐标({}, {})".format(x, y))
 
     return "{},{}".format(x, y)
+
+
+def mouse_click_(position: str = ""):
+    x, y = position.split(",")
+    x, y = int(x), int(y)
+    pag.click(x, y, clicks=2, interval=0.25)
 
 
 if __name__ == '__main__':
