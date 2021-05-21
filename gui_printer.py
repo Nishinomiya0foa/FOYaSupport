@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 import json
-from threading import Thread, Timer
+import time
 
 from utils import init_database,  init_all_data, handle_words, search_related_records, get_keywords, get_user_config
 from db_handler import engine
@@ -13,6 +13,21 @@ from const import ConstCode
 
 filt_path = "data/qqfo.dat"
 pic_path = "data/test_pic.png"
+
+
+def auto_choose_answer(wrong_answer: str, ans_content: list):
+    if wrong_answer:
+        wrong_answer: list = json.loads(wrong_answer)
+    else:
+        wrong_answer = []
+
+    # 找到其中不在错题中出现的那个答案, 也就是相似度最低的
+    similar_list = []
+    for ind in range(len(ans_content)):
+        words, index, similar = get_the_most_similar(ans_content[ind], wrong_answer, need_similar=True)
+        similar_list.append({similar: ind+1})
+    similar_list.sort(key=lambda d: list(d.keys())[0], reverse=False)
+    return list(similar_list[0].values())[0]
 
 
 class MyWindow():
@@ -85,15 +100,6 @@ class MyWindow():
         ans_click_obj = getattr(self, "ans_click_"+str(index))
         return ans_click_obj.get()
 
-    def auto_choose_answer(self, wrong_answer: str):
-        if wrong_answer:
-            wrong_answer: list = json.loads(wrong_answer)
-        else:
-            wrong_answer = []
-        chosen_index = len(wrong_answer) + 1
-        position = self.find_position_by_index(chosen_index)
-        mouse_click_(position)
-
     def apply_(self, p1, p2, key):
         grab_screen(p1, p2)
         r = pic_handle("data/test.png", key)
@@ -103,20 +109,25 @@ class MyWindow():
             ques_content, ans_content = handle_words(res)
             keywords = get_keywords(ques_content)
             data_res = search_related_records(keywords)
-            print(data_res, "data_res")
+            print(data_res, "data_res", len(data_res))
 
-            if len(data_res) >= 1:
+            if len(data_res) >= 1:  # 数据库中存在该题目
                 real_ans, final_index = get_the_most_similar(ques_content, [r[1] for r in data_res])
                 real_ans = data_res[final_index][2]
                 pno = data_res[final_index][0]
                 if real_ans:  # find correct answer
                     given_ans, index = get_the_most_similar(real_ans, ans_content)
                     position: str = self.find_position_by_index(index+1)
-                    mouse_click_(position)
+                    print(real_ans)
+                    if self.auto_apply:
+                        mouse_click_(position)
                 else:  # not find correct answer but find wrong answer
                     wrong_ans = data_res[final_index][3]
                     print("题目尚无正确答案,进行随即作答")
-                    self.auto_choose_answer(wrong_ans)
+                    index = auto_choose_answer(wrong_ans, ans_content)
+                    print("index: ", index)
+                    position = self.find_position_by_index(index)
+                    mouse_click_(position)
                     wrong_ans = json.loads(wrong_ans)
                     correct = sg.popup_yes_no("选择对了吗?", keep_on_top=True)
                     if correct == "Yes":
@@ -124,23 +135,19 @@ class MyWindow():
                     else:
                         engine.update_or_insert(pno=pno, ques=ques_content, wrong_ans=[ans_content[len(wrong_ans)]])
 
-            elif len(data_res) == 0:
+            else:  # 未收录的情况进行顺序作答,记录正确错误
                 print("题目可能未收录, 进行随机作答")
                 real_ans = ""
-                self.auto_choose_answer("")
-                correct = sg.popup_yes_no("选择对了吗?", keep_on_top=True)
+                # index = self.auto_choose_answer("", ans_content)
+                position = self.find_position_by_index(1)
+                mouse_click_(position)
+                correct = sg.popup_yes_no("选择对了吗?", keep_on_top=True)  # 百度文字识别每日字数限制,这里选择手动识别
                 if correct == "Yes":
                     engine.update_or_insert(ques=ques_content, ans=ans_content[0])  # first time apply 0
                 else:
                     engine.update_or_insert(ques=ques_content, wrong_ans=ans_content[:1])  # wrong_ans must be a list
-            else:
-                real_ans, final_index = get_the_most_similar(ques_content, [r[1] for r in data_res])
-                real_ans = data_res[final_index][2]
-                given_ans, index = get_the_most_similar(real_ans, ans_content)
-                position: str = self.find_position_by_index(index+1)
-                mouse_click_(position)
             print(real_ans)
-            return real_ans
+            # return real_ans
 
     def show(self):
         key = get_key()
@@ -178,8 +185,7 @@ class MyWindow():
                 # TODO get whole ques_area and ans_area
                 p2_origin_ans_right_bottom = self.right_bottom_ans.get().split(",")
                 p1, p2 = tuple(int(x) for x in p1_origin_ques_left_top), tuple(int(y) for y in p2_origin_ans_right_bottom)
-                res = self.apply_(p1, p2, key)
-                print(res)
+                self.apply_(p1, p2, key)
             elif event in ["stop"]:
                 self.stop_btn.update(disabled=True)
                 self.start_btn.update(disabled=False)

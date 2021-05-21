@@ -27,6 +27,9 @@ def mouse_click_(position: str = ""):
 
 
 if __name__ == '__main__':
-    pag.moveTo(0,0)
-    pag.leftClick()
+    # pag.moveTo(0,0)
+    # pag.leftClick()
+    while True:
+        print(pag.position())
+        time.sleep(1)
     ...

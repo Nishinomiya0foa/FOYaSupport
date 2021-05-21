@@ -4,7 +4,6 @@ import jieba.analyse
 from db_handler import engine
 
 
-
 def init_database():
     bank_exist = engine.check_table_exist("t_bank")
     init_result = [False, False]
@@ -69,6 +68,7 @@ def init_all_data(file_url, init_database_result):
 
 
 def handle_words(res):
+    print(res)
     words = res.get("words_result")
     words_ques = "".join([r.get("words") for r in words[:-4]])
     words_ans = [r.get("words") for r in words[-4:]]
