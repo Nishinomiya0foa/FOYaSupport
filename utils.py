@@ -68,7 +68,7 @@ def init_all_data(file_url, init_database_result):
 
 
 def handle_words(res):
-    print(res)
+    # print(res)
     words = res.get("words_result")
     words_ques = "".join([r.get("words") for r in words[:-4]])
     words_ans = [r.get("words") for r in words[-4:]]
@@ -77,13 +77,15 @@ def handle_words(res):
 
 def search_related_records(word_list):
     params = "%"
+    if len(word_list) <= 1:
+        return []
     for word in word_list:
         params += word[:3]
         params += "%"
-    print(params)
+    # print(params)
     sql = "select * from t_bank where ques like '{}'".format(params)
     res = engine.execute(query=sql).fetchall()
-    print(res)
+    # print(res)
     return res
 
 

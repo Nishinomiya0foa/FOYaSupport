@@ -23,13 +23,23 @@ def get_panel_size(desc=""):
 def mouse_click_(position: str = ""):
     x, y = position.split(",")
     x, y = int(x), int(y)
-    pag.click(x, y, clicks=2, interval=0.25)
+    pag.click(x, y, clicks=3, interval=0.35)
+
+
+def move_back_(x, y):
+    print(x-15, y-15)
+    # pag.click(x-15, y-15)
+    pag.moveTo(x, y)
+    print(x, y)
 
 
 if __name__ == '__main__':
     # pag.moveTo(0,0)
     # pag.leftClick()
+    move_back_(1333, 516)
     while True:
         print(pag.position())
-        time.sleep(1)
-    ...
+        x, y = pag.position()
+        # if x < 720:
+        #     pag.click(x, y, clicks=3, interval=0.35)
+        time.sleep(3)

@@ -5,7 +5,7 @@ import time
 from utils import init_database,  init_all_data, handle_words, search_related_records, get_keywords, get_user_config
 from db_handler import engine
 from screan_getter import grab_screen
-from pic_handler import pic_handle, get_key
+from pic_handler import pic_handle, get_key, merge_pic
 from related_words import get_equal_rate, get_the_most_similar
 from monitor import get_panel_size, mouse_click_
 from const import ConstCode
@@ -55,8 +55,8 @@ class MyWindow():
         self.output_area = sg.Output((50, 5))
         self.output_text = sg.Text("shuchu", size=(60, 7), text_color="red")
         self.clear_btn = sg.Button("clear")
-        self.start_btn = sg.Button("start")
-        self.stop_btn = sg.Button("stop", disabled=True)
+        self.start_btn = sg.Button("start", bind_return_key=True, focus=True)
+        self.stop_btn = sg.Button("stop")
         self.auto_apply = 1
         self.init_data()
         self.layout = [[self.pic_area_btn, self.left_top, self.right_bottom],
@@ -97,15 +97,18 @@ class MyWindow():
 
     def find_position_by_index(self, index):
         index = min(index, 4)
+        print("index: ", index)
         ans_click_obj = getattr(self, "ans_click_"+str(index))
         return ans_click_obj.get()
 
-    def apply_(self, p1, p2, key):
-        grab_screen(p1, p2)
-        r = pic_handle("data/test.png", key)
+    def apply_(self, p1, p2, p3, p4, key):
+        grab_screen(p1, p2, "data/pic_ques.png")
+        grab_screen(p3, p4, "data/pic_ans.png")
+        merge_pic("data/pic_ques.png", "data/pic_ans.png")
+        r = pic_handle("data/target_img.png", key)
         if r:
             res = r
-            print(res)
+            # print("words result: ", res)
             ques_content, ans_content = handle_words(res)
             keywords = get_keywords(ques_content)
             data_res = search_related_records(keywords)
@@ -131,9 +134,11 @@ class MyWindow():
                     wrong_ans = json.loads(wrong_ans)
                     correct = sg.popup_yes_no("选择对了吗?", keep_on_top=True)
                     if correct == "Yes":
-                        engine.update_or_insert(pno=pno, ques=ques_content, ans=ans_content[len(wrong_ans)])
+                        if len(wrong_ans) < 4:
+                            engine.update_or_insert(pno=pno, ques=ques_content, ans=ans_content[len(wrong_ans)])
                     else:
-                        engine.update_or_insert(pno=pno, ques=ques_content, wrong_ans=[ans_content[len(wrong_ans)]])
+                        if len(wrong_ans) < 4:
+                            engine.update_or_insert(pno=pno, ques=ques_content, wrong_ans=[ans_content[len(wrong_ans)]])
 
             else:  # 未收录的情况进行顺序作答,记录正确错误
                 print("题目可能未收录, 进行随机作答")
@@ -147,6 +152,7 @@ class MyWindow():
                 else:
                     engine.update_or_insert(ques=ques_content, wrong_ans=ans_content[:1])  # wrong_ans must be a list
             print(real_ans)
+            self.start_btn.set_focus(force=True)
             # return real_ans
 
     def show(self):
@@ -178,18 +184,21 @@ class MyWindow():
             elif event in ["clear"]:
                 self.output_text.update("")
             elif event in ["start"]:
-                self.start_btn.update(disabled=True)
-                self.stop_btn.update(disabled=False)
+                # self.start_btn.update(disabled=True)
+                # self.stop_btn.update(disabled=False)
                 p1_origin_ques_left_top = self.left_top.get().split(",")
-                # p2_origin = self.right_bottom.get().split(",")
-                # TODO get whole ques_area and ans_area
-                p2_origin_ans_right_bottom = self.right_bottom_ans.get().split(",")
-                p1, p2 = tuple(int(x) for x in p1_origin_ques_left_top), tuple(int(y) for y in p2_origin_ans_right_bottom)
-                self.apply_(p1, p2, key)
-            elif event in ["stop"]:
-                self.stop_btn.update(disabled=True)
-                self.start_btn.update(disabled=False)
+                p2_origin_ques_right_bottom = self.right_bottom.get().split(",")
 
+                p3_origin_ans_left_top = self.left_top_ans.get().split(",")
+                p4_origin_ans_right_bottom = self.right_bottom_ans.get().split(",")
+
+                p1, p2 = tuple(int(x) for x in p1_origin_ques_left_top), tuple(int(y) for y in p2_origin_ques_right_bottom)
+                p3, p4 = tuple(int(x) for x in p3_origin_ans_left_top), tuple(int(y) for y in p4_origin_ans_right_bottom)
+                self.apply_(p1, p2, p3, p4, key)
+            elif event in ["stop"]:
+                # self.stop_btn.update(disabled=True)
+                # self.start_btn.update(disabled=False)
+                ...
             elif event in [None]:
                 break
         self.window.close()

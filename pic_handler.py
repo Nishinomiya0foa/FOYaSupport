@@ -63,3 +63,28 @@ def key_failed(res, key):  # TODO TOKEN
         failed_key_list.append(key)
         new_key = get_key()
     return new_key
+
+
+def merge_pic(pic1, pic2):
+    import PIL.Image as Image
+
+    pic1 = Image.open(pic1)
+    # pic1 = pic1.resize((640, 930))
+    pic1 = pic1.convert('RGBA')
+
+    pic2 = Image.open(pic2)
+    # pic2 = pic2.resize((640, 930))
+    pic2 = pic2.convert('RGBA')
+
+    pic1_width, pic1_height = pic1.size
+    pic2_width, pic2_height = pic2.size
+
+    print(pic1.size)
+    print(pic2.size)
+
+    target_img = Image.new('RGB', (pic1_width, pic1_height+pic2_height))
+
+    target_img.paste(pic1, (0, 0, pic1_width, pic1_height))
+    target_img.paste(pic2, (0, pic1_height, pic2_width, pic1_height+pic2_height))
+
+    target_img.save("data/target_img.png")
